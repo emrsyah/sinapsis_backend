@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\GoogleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\NoteController;
+use App\Http\Controllers\FolderController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -20,6 +21,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('v1/notes/{id}', [NoteController::class, 'delete']);
     Route::patch('v1/notes/{id}/restore', [NoteController::class, 'restore']);
     Route::delete('v1/notes/{id}/force', [NoteController::class, 'destroy']);
+
+    Route::get('v1/folders', [FolderController::class, 'index']);
+    Route::post('v1/folders', [FolderController::class, 'create']);
+    Route::patch('v1/folders/{id}', [FolderController::class, 'update']);
+    Route::delete('v1/folders/{id}', [FolderController::class, 'destroy']);
 });
 
 Route::get('v1/notes', [NoteController::class, 'index']);
