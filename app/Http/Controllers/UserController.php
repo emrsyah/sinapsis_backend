@@ -55,21 +55,21 @@ class UserController extends Controller
      */
     public function update(Request $request)
     {
-        $user = Auth::user();
+        $user = $request->user();
 
         // Validasi secara parsial, hanya field yang dikirim yang akan diupdate
         $validated = $request->validate([
             'name'  => 'sometimes|required|string|max:255',
-            'email' => 'sometimes|required|string|email|max:255|unique:users,email,'.$user->user_id.',user_id',
             'image' => 'nullable|string',
         ]);
 
         $user->update($validated);
 
         return response()->json([
+            'status' => 'success',
             'message' => 'Berrhasil mengupdate profil',
             'data'    => $user,
-        ]);
+        ], 200);
     }
 
     /**
@@ -80,19 +80,18 @@ class UserController extends Controller
         //
     }
 
-    public function profile(): JsonResponse
+    public function profile(Request $request): JsonResponse
     {
-        $user = Auth::user();
-        return response()->json([
-            'data' => $user,
-        ]);
-    }
+        $user = $request->user();
 
-    public function verifiedEmail()
-    {
-        $user = Auth::user();
-        $user->email_verified_at = now();
-        $user->save();
-        return redirect()->route('profile');
+        if (!$user) {
+            return response()->json(['message' => 'User tidak ditemukan'], 404);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Data user berhasil diambil',
+            'data' => $user,
+        ], 200);
     }
 }

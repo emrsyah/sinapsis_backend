@@ -10,10 +10,17 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-Route::get('v1/auth/login', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
-
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('v1/auth/logout', [GoogleController::class, 'logout']);
+
     Route::patch('v1/auth/me', [UserController::class, 'update']);
-    Route::get('v1/auth/me', [UserController::class, 'profile']);
+
+    Route::post('v1/notes', [NoteController::class, 'create']);
+    Route::patch('v1/notes/{id}', [NoteController::class, 'update']);
+    Route::delete('v1/notes/{id}', [NoteController::class, 'delete']);
+    Route::patch('v1/notes/{id}/restore', [NoteController::class, 'restore']);
+    Route::delete('v1/notes/{id}/force', [NoteController::class, 'destroy']);
 });
+
+Route::get('v1/notes', [NoteController::class, 'index']);
+Route::get('v1/notes/{id}', [NoteController::class, 'showOne']);
