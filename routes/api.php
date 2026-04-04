@@ -6,6 +6,7 @@ use App\Http\Controllers\GoogleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\FolderController;
+use App\Http\Controllers\TagController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -26,6 +27,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('v1/folders', [FolderController::class, 'create']);
     Route::patch('v1/folders/{id}', [FolderController::class, 'update']);
     Route::delete('v1/folders/{id}', [FolderController::class, 'destroy']);
+
+    Route::get('v1/tags', [TagController::class, 'index']);
+    Route::post('v1/tags', [TagController::class, 'create']);
+    Route::patch('v1/tags/{id}', [TagController::class, 'update']);
+    Route::delete('v1/tags/{id}', [TagController::class, 'destroy']);
+    Route::post('v1/notes/{note_id}/tags/{tag_id}', [TagController::class, 'attachToNote']);
+    Route::delete('v1/notes/{note_id}/tags/{tag_id}', [TagController::class, 'detachFromNote']);
 });
 
 Route::get('v1/notes', [NoteController::class, 'index']);

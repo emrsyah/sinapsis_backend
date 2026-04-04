@@ -71,23 +71,6 @@ class NoteController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
      * Update the specified data in storage.
      */
     public function update(Request $request, string $id)
@@ -151,6 +134,21 @@ class NoteController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Berhasil mengembalikan catatan dari tong sampah',
+            'data' => $note,
+        ], 200);
+    }
+
+    public function attachTag(Request $request, string $note_id, string $tag_id)
+    {
+        $note = Note::where('user_id', $request->user()->user_id)
+            ->where('id', $note_id)
+            ->firstOrFail();
+
+        $note->tags()->attach($tag_id);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Tag berhasil ditambahkan ke note',
             'data' => $note,
         ], 200);
     }
