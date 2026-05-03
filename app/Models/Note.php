@@ -104,18 +104,7 @@ class Note extends Model
         return $this->hasMany(StudyToolGeneration::class);
     }
 
-    // Bi-directional links
-    public function outgoingLinks()
-    {
-        return $this->hasMany(NoteLink::class, 'source_note');
-    }
-
-    public function incomingLinks()
-    {
-        return $this->hasMany(NoteLink::class, 'target_note');
-    }
-
-    public function linkedNotes()
+    public function goingLinks()
     {
         return $this->belongsToMany(
             Note::class,
@@ -125,7 +114,7 @@ class Note extends Model
         );
     }
 
-    public function backlinks()
+    public function backLinks()
     {
         return $this->belongsToMany(
             Note::class,

@@ -7,6 +7,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\FolderController;
 use App\Http\Controllers\TagController;
+use App\Http\Controllers\NoteLinkController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -17,6 +18,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::patch('v1/auth/me', [UserController::class, 'update']);
 
+    Route::get('v1/notes', [NoteController::class, 'index']);
+    Route::get('v1/notes/{id}', [NoteController::class, 'showOne']);
     Route::post('v1/notes', [NoteController::class, 'create']);
     Route::patch('v1/notes/{id}', [NoteController::class, 'update']);
     Route::delete('v1/notes/{id}', [NoteController::class, 'delete']);
@@ -34,7 +37,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('v1/tags/{id}', [TagController::class, 'destroy']);
     Route::post('v1/notes/{note_id}/tags/{tag_id}', [TagController::class, 'attachToNote']);
     Route::delete('v1/notes/{note_id}/tags/{tag_id}', [TagController::class, 'detachFromNote']);
+
+    Route::get('v1/notes/{note_id}/links', [NoteLinkController::class, 'index']);
+    Route::post('v1/notes/{note_id}/links', [NoteLinkController::class, 'create']);
+    Route::delete('v1/notes/{id}/links/{target_id}', [NoteLinkController::class, 'destroy']);
 });
 
-Route::get('v1/notes', [NoteController::class, 'index']);
-Route::get('v1/notes/{id}', [NoteController::class, 'showOne']);
+

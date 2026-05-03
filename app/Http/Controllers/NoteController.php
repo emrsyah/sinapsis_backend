@@ -11,34 +11,50 @@ class NoteController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Note::query();
+        $query = Note::query()->where('user_id', $request->user()->user_id);
 
-        if ($request->folder_id) {
-            $query->where('folder_id', $request->folder_id);
+        // 2. Ambil filter dari Query Params (?folder_id=...)
+        if ($request->query('folder_id')) {
+            $query->where('folder_id', $request->query('folder_id'));
         }
 
-        if ($request->title) {
-            $query->where('title', 'like', "%{$request->title}%");
+        if ($request->query('tag_id')) {
+            $query->whereHas('tags', function ($q) use ($request) {
+                $q->where('tags.id', $request->query('tag_id'));
+            });
         }
 
-        if ($request->active) {
-            $query->active();
-        } 
+        if ($request->query('search')) {
+            $search = strtolower($request->query('search'));
+            $query->where(function($q) use ($search) {
+                $q->whereRaw('LOWER(title) LIKE ?', ["%{$search}%"])
+                    ->orWhereRaw('LOWER(content) LIKE ?', ["%{$search}%"]);
+            });
+        }
 
-        if ($request->trash) {
+        if ($request->query('trash') == 'true') {
             $query->trashed();
+        } else {
+            $query->active();
         }
+
+        // 4. Ambil data beserta relasinya agar frontend tidak perlu fetch berkali-kali
+        $notes = $query->with(['tags', 'folder'])->get();
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Data note berhasil diambil',
-            'data' => $query->get(),
+            'message' => 'Data catatan berhasil diambil',
+            'data' => $notes,
         ], 200);
     }
 
-    public function showOne(string $id)
+
+    public function showOne(Request $request, string $id)
     {
-        $note = Note::findOrFail($id);
+        $note = Note::where('user_id', $request->user()->user_id)
+            ->where('id', $id)
+            ->with(['goingLinks', 'backLinks', 'tags'])
+            ->first();
 
         if (!$note) {
             return response()->json(['message' => 'Catatan tidak ditemukan'], 404);
@@ -75,22 +91,36 @@ class NoteController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        $note = Note::findOrFail($id);
+        $note = Note::where('user_id', $request->user()->user_id)
+            ->where('id', $id)
+            ->firstOrFail();
 
         if (!$note) {
             return response()->json(['message' => 'Catatan tidak ditemukan'], 404);
         }
 
-        $note->update([
-            'folder_id' => $request->folder_id,
-            'title'     => $request->title,
-            'content'   => $request->content,
-        ]);
+        $dataToUpdate = [];
+
+        if ($request->has('folder_id')){
+            $dataToUpdate['folder_id'] = $request['folder_id'];
+        }
+
+        if ($request->has('title')){
+            $dataToUpdate['title'] = $request['title'];
+        }
+
+        if ($request->has('content')){
+            $dataToUpdate['content'] = $request['content'];
+        }
+
+        if (!empty($dataToUpdate)){
+            $note->update($dataToUpdate);
+        }
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Note updated.',
-            'data'    => $note,
+            'message' => 'Note berhasil diupdate',
+            'data' => $note,
         ], 200);
     }
 
