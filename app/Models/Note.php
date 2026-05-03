@@ -2,17 +2,22 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Note extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, SoftDeletes;
 
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [
@@ -22,51 +27,29 @@ class Note extends Model
         'content',
         'is_published',
         'share_token',
-        'deleted_at',
     ];
 
     protected function casts(): array
     {
         return [
             'is_published' => 'boolean',
-            'deleted_at'   => 'datetime',
+            'deleted_at' => 'datetime',
         ];
-    }
-
-    // Custom soft delete (manual, not SoftDeletes trait, so we control trash queries)
-    public function scopeActive($query)
-    {
-        return $query->whereNull('deleted_at');
-    }
-
-    public function scopeTrashed($query)
-    {
-        return $query->whereNotNull('deleted_at');
-    }
-
-    public function softDelete(): void
-    {
-        $this->update(['deleted_at' => now()]);
-    }
-
-    public function restore(): void
-    {
-        $this->update(['deleted_at' => null]);
-    }
-
-    public function isDeleted(): bool
-    {
-        return $this->deleted_at !== null;
     }
 
     // Sharing
     public function generateShareToken(): string
     {
+        if ($this->share_token) {
+            return $this->share_token;
+        }
+
         $token = Str::random(64);
         $this->update([
             'is_published' => true,
-            'share_token'  => $token,
+            'share_token' => $token,
         ]);
+
         return $token;
     }
 
@@ -74,64 +57,54 @@ class Note extends Model
     {
         $this->update([
             'is_published' => false,
-            'share_token'  => null,
+            'share_token' => null,
         ]);
     }
 
     // Relationships
-    public function user()
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_id', 'user_id');
     }
 
-    public function folder()
+    public function folder(): BelongsTo
     {
         return $this->belongsTo(Folder::class);
     }
 
-    public function tags()
+    public function tags(): BelongsToMany
     {
         return $this->belongsToMany(Tag::class, 'note_tags');
     }
 
-    public function attachments()
+    public function attachments(): HasMany
     {
         return $this->hasMany(Attachment::class);
     }
 
-    public function studyTools()
+    public function studyTools(): HasMany
     {
         return $this->hasMany(StudyToolGeneration::class);
     }
 
-    // Bi-directional links
-    public function outgoingLinks()
+    public function outgoingLinks(): BelongsToMany
     {
-        return $this->hasMany(NoteLink::class, 'source_note');
+        return $this->belongsToMany(Note::class, 'note_links', 'source_note', 'target_note');
     }
 
-    public function incomingLinks()
+    public function backlinks(): BelongsToMany
     {
-        return $this->hasMany(NoteLink::class, 'target_note');
+        return $this->belongsToMany(Note::class, 'note_links', 'target_note', 'source_note');
     }
 
-    public function linkedNotes()
+    // Scopes
+    public function scopeForUser(Builder $query, User $user): Builder
     {
-        return $this->belongsToMany(
-            Note::class,
-            'note_links',
-            'source_note',
-            'target_note'
-        );
+        return $query->where('user_id', $user->user_id);
     }
-
-    public function backlinks()
+ 
+    public function scopeNotTrashed(Builder $query): Builder
     {
-        return $this->belongsToMany(
-            Note::class,
-            'note_links',
-            'target_note',
-            'source_note'
-        );
+        return $query->whereNull('deleted_at');
     }
 }

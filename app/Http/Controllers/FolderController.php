@@ -2,92 +2,60 @@
 
 namespace App\Http\Controllers;
 
+use App\Data\Folder\FolderData;
+use App\Data\Folder\StoreFolderData;
+use App\Data\Folder\UpdateFolderData;
 use App\Models\Folder;
-use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class FolderController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Display nested tree of user's root folders.
      */
-    public function index()
+    public function index(Request $request): JsonResponse
     {
-        $folder = Folder::where('user_id', request()->user()->user_id)
+        $folders = Folder::query()
+            ->forUser($request->user())
             ->whereNull('parent_id')
             ->with('children')
             ->get();
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Data folder berhasil diambil',
-            'data' => $folder,
-        ], 200);
+        return response()->json(FolderData::collect($folders));
     }
 
     /**
-     * Show the form for creating a new resource.
+     * Store a newly created folder.
      */
-    public function create(Request $request)
+    public function store(StoreFolderData $data, Request $request): JsonResponse
     {
-        $folder = Folder::create([
-            'user_id' => $request->user()->user_id,
-            'parent_id' => $request->parent_id ?? null,
-            'name' => $request->name,
-        ]);
+        $folder = $request->user()->folders()->create($data->toArray());
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Folder berhasil dibuat',
-            'data' => $folder,
-        ], 200);
+        return response()->json(FolderData::fromModel($folder), 201);
     }
 
     /**
-     * Update the specified resource in storage.
+     * Update the specified folder.
      */
-    public function update(Request $request, string $id)
+    public function update(UpdateFolderData $data, Folder $folder): FolderData
     {
-        $folder = Folder::where('user_id', $request->user()->user_id)
-            ->where('id', $id)
-            ->firstOrFail();
+        $this->authorize('update', $folder);
 
-        $dataToUpdate = [];
+        $folder->update(array_filter($data->toArray(), fn ($v) => $v !== null));
 
-        if ($request->has('name')) {
-            $dataToUpdate['name'] = $request->name;
-        }
-
-        if ($request->has('parent_id')) {
-            $dataToUpdate['parent_id'] = $request->parent_id;
-        }
-
-        if (!empty($dataToUpdate)) {
-            $folder->update($dataToUpdate);
-        }
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Folder berhasil diupdate',
-            'data' => $folder,
-        ], 200);
+        return FolderData::fromModel($folder->fresh()->load('children'));
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Remove the specified folder.
      */
-    public function destroy(string $id)
+    public function destroy(Folder $folder): JsonResponse
     {
-        $folder = Folder::where('user_id', request()->user()->user_id)
-            ->where('id', $id)
-            ->firstOrFail();
+        $this->authorize('delete', $folder);
 
         $folder->delete();
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Folder berhasil dihapus',
-            'data' => $folder,
-        ], 200);
+        return response()->json(null, 204);
     }
 }

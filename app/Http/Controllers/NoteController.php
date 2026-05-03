@@ -2,154 +2,162 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
+use App\Data\Note\NoteData;
+use App\Data\Note\StoreNoteData;
+use App\Data\Note\UpdateNoteData;
 use App\Models\Note;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class NoteController extends Controller
 {
-    public function index(Request $request)
+    /**
+     * Display a listing of the user's notes.
+     */
+    public function index(Request $request): JsonResponse
     {
-        $query = Note::query();
+        $query = Note::query()
+            ->forUser($request->user())
+            ->with(['tags']);
 
         if ($request->folder_id) {
             $query->where('folder_id', $request->folder_id);
         }
 
-        if ($request->title) {
-            $query->where('title', 'like', "%{$request->title}%");
+        if ($request->search) {
+            $query->where('title', 'like', "%{$request->search}%");
         }
 
-        if ($request->active) {
-            $query->active();
-        } 
-
-        if ($request->trash) {
-            $query->trashed();
+        if ($request->boolean('trash')) {
+            $query->onlyTrashed();
         }
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Data note berhasil diambil',
-            'data' => $query->get(),
-        ], 200);
-    }
+        $notes = $query->get();
 
-    public function showOne(string $id)
-    {
-        $note = Note::findOrFail($id);
-
-        if (!$note) {
-            return response()->json(['message' => 'Catatan tidak ditemukan'], 404);
-        }
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Data note berhasil diambil',
-            'data' => $note,
-        ], 200);
+        return response()->json(NoteData::collect($notes));
     }
 
     /**
-     * Show the form for creating a new resource.
+     * Store a newly created note.
      */
-    public function create(Request $request): JsonResponse
+    public function store(StoreNoteData $data, Request $request): JsonResponse
     {
-        $note = Note::create([
-            'user_id'   => $request->user()->user_id,
-            'folder_id' => $request->folder_id ?: null,
-            'title'     => $request->title,
-            'content'   => $request->content,
-        ]);
+        $note = $request->user()->notes()->create($data->toArray());
 
-        return response()->json([
-            'status'  => 'success',
-            'message' => 'Note created.',
-            'data'    => $note,
-        ], 200);
+        return response()->json(NoteData::fromModel($note->load('tags')), 201);
     }
 
     /**
-     * Update the specified data in storage.
+     * Display the specified note.
      */
-    public function update(Request $request, string $id)
+    public function show(Request $request, Note $note): NoteData
     {
-        $note = Note::findOrFail($id);
+        $this->authorize('view', $note);
 
-        if (!$note) {
-            return response()->json(['message' => 'Catatan tidak ditemukan'], 404);
-        }
-
-        $note->update([
-            'folder_id' => $request->folder_id,
-            'title'     => $request->title,
-            'content'   => $request->content,
-        ]);
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Note updated.',
-            'data'    => $note,
-        ], 200);
+        return NoteData::fromModel($note->load(['tags', 'backlinks', 'outgoingLinks']));
     }
 
     /**
-     * Set deleted_at at the specified data from storage.
+     * Update the specified note.
      */
-    public function delete(string $id) 
+    public function update(UpdateNoteData $data, Note $note): NoteData
     {
-        $note = Note::findOrFail($id);
-        $note->softDelete();
+        $this->authorize('update', $note);
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Berhasil memindahkan catatan ke tong sampah',
-            'data' => $note,
-        ], 200);
+        $note->update(array_filter($data->toArray(), fn ($v) => $v !== null));
+
+        return NoteData::fromModel($note->fresh()->load(['tags', 'backlinks']));
     }
 
     /**
-     * Remove the specified data from storage.
+     * Soft delete the specified note (move to trash).
      */
-    public function destroy(string $id)
+    public function destroy(Note $note): JsonResponse
     {
-        $note = Note::findOrFail($id);
-        
+        $this->authorize('delete', $note);
+
         $note->delete();
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Catatan berhasil dihapus permanen',
-            'data' => $note,
-        ], 200);
+        return response()->json(null, 204);
     }
 
-    public function restore(string $id)
+    /**
+     * Restore a soft-deleted note from trash.
+     */
+    public function restore(Request $request, string $id): NoteData
     {
-        $note = Note::findOrFail($id);
+        $note = Note::withTrashed()
+            ->forUser($request->user())
+            ->findOrFail($id);
+
+        $this->authorize('restore', $note);
 
         $note->restore();
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Berhasil mengembalikan catatan dari tong sampah',
-            'data' => $note,
-        ], 200);
+        return NoteData::fromModel($note->fresh());
     }
 
-    public function attachTag(Request $request, string $note_id, string $tag_id)
+    /**
+     * Permanently delete the specified note.
+     */
+    public function forceDelete(Request $request, string $id): JsonResponse
     {
-        $note = Note::where('user_id', $request->user()->user_id)
-            ->where('id', $note_id)
-            ->firstOrFail();
+        $note = Note::withTrashed()
+            ->forUser($request->user())
+            ->findOrFail($id);
 
-        $note->tags()->attach($tag_id);
+        $this->authorize('forceDelete', $note);
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Tag berhasil ditambahkan ke note',
-            'data' => $note,
-        ], 200);
+        $note->forceDelete();
+
+        return response()->json(null, 204);
+    }
+
+    /**
+     * Attach a tag to the note.
+     */
+    public function attachTag(Request $request, Note $note, string $tag): JsonResponse
+    {
+        $this->authorize('update', $note);
+
+        $note->tags()->syncWithoutDetaching([$tag]);
+
+        return response()->json(null, 204);
+    }
+
+    /**
+     * Detach a tag from the note.
+     */
+    public function detachTag(Request $request, Note $note, string $tag): JsonResponse
+    {
+        $this->authorize('update', $note);
+
+        $note->tags()->detach($tag);
+
+        return response()->json(null, 204);
+    }
+
+    /**
+     * Publish the note and generate a share token.
+     */
+    public function share(Note $note): NoteData
+    {
+        $this->authorize('update', $note);
+
+        $note->generateShareToken();
+
+        return NoteData::fromModel($note->fresh());
+    }
+
+    /**
+     * Unpublish the note and revoke the share token.
+     */
+    public function unshare(Note $note): NoteData
+    {
+        $this->authorize('update', $note);
+
+        $note->unpublish();
+
+        return NoteData::fromModel($note->fresh());
     }
 }

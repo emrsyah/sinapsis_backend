@@ -60,6 +60,19 @@ return [
             'report' => false,
         ],
 
+        'supabase' => [
+            'driver' => 's3',
+            'key' => env('SUPABASE_ACCESS_KEY_ID'),
+            'secret' => env('SUPABASE_SECRET_ACCESS_KEY'),
+            'region' => env('SUPABASE_REGION'),
+            'bucket' => env('SUPABASE_BUCKET'),
+            'endpoint' => env('SUPABASE_ENDPOINT'),
+            'use_path_style_endpoint' => env('SUPABASE_USE_PATH_STYLE_ENDPOINT', false),
+            // Build the public URL manually to point to /object/public/
+            'url' => str_replace('/s3', '/object/public/'.env('SUPABASE_BUCKET'), env('SUPABASE_ENDPOINT')),
+            'throw' => true,
+        ],
+
     ],
 
     /*
