@@ -68,7 +68,7 @@ Route::prefix('v1')->group(function () {
 
         // Study Tools
         Route::post('notes/{id}/study-tools', [StudyToolController::class, 'store']);
-        Route::get('v1/study-tools/{id}', [StudyToolController::class, 'showOne']);
+        Route::get('study-tools/{id}', [StudyToolController::class, 'showOne']);
         Route::get('notes/{id}/study-tools', [StudyToolController::class, 'index']);
     });
 });
