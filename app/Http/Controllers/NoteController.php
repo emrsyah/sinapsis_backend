@@ -8,6 +8,7 @@ use App\Data\Note\UpdateNoteData;
 use App\Models\Note;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Events\MessageSent;
 
 class NoteController extends Controller
 {

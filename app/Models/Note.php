@@ -82,11 +82,6 @@ class Note extends Model
         return $this->hasMany(Attachment::class);
     }
 
-    public function studyTools(): HasMany
-    {
-        return $this->hasMany(StudyToolGeneration::class);
-    }
-
     public function outgoingLinks(): BelongsToMany
     {
         return $this->belongsToMany(Note::class, 'note_links', 'source_note', 'target_note');
@@ -102,9 +97,14 @@ class Note extends Model
     {
         return $query->where('user_id', $user->user_id);
     }
- 
+
     public function scopeNotTrashed(Builder $query): Builder
     {
         return $query->whereNull('deleted_at');
+    }
+
+    public function studyTools(): HasMany
+    {
+        return $this->hasMany(StudyTool::class);
     }
 }

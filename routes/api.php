@@ -7,12 +7,14 @@ use App\Http\Controllers\NoteController;
 use App\Http\Controllers\NoteLinkController;
 use App\Http\Controllers\ShareController;
 use App\Http\Controllers\TagController;
+use App\Http\Controllers\StudyToolController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
 
 Route::prefix('v1')->group(function () {
     // OAuth
-    Route::get('auth/google', [AuthController::class, 'redirectToGoogle']);
-    Route::get('auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
+    Route::get('auth/login', [AuthController::class, 'redirectToGoogle'])->name('google.login');
 
     // Public Sharing
     Route::get('shared/{token}', [ShareController::class, 'show']);
@@ -35,8 +37,8 @@ Route::prefix('v1')->group(function () {
         Route::delete('notes/{id}/force', [NoteController::class, 'forceDelete']);
 
         // Sharing actions
-        Route::post('notes/{note}/share', [NoteController::class, 'share']);
-        Route::delete('notes/{note}/share', [NoteController::class, 'unshare']);
+        Route::post('notes/{note}/publish', [NoteController::class, 'share']);
+        Route::delete('notes/{note}/publish', [NoteController::class, 'unshare']);
 
         // Note Tags (Specific Note-Tag context)
         Route::post('notes/{note}/tags/{tag}', [NoteController::class, 'attachTag']);
@@ -63,5 +65,10 @@ Route::prefix('v1')->group(function () {
         Route::post('tags', [TagController::class, 'store']);
         Route::patch('tags/{tag}', [TagController::class, 'update']);
         Route::delete('tags/{tag}', [TagController::class, 'destroy']);
+
+        // Study Tools
+        Route::post('notes/{id}/study-tools', [StudyToolController::class, 'store']);
+        Route::get('v1/study-tools/{id}', [StudyToolController::class, 'showOne']);
+        Route::get('notes/{id}/study-tools', [StudyToolController::class, 'index']);
     });
 });
