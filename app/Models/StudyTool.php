@@ -19,6 +19,7 @@ class StudyTool extends Model
     protected $keyType = 'string';
 
     protected $fillable = [
+        'user_id',
         'note_id',
         'type',
         'content',

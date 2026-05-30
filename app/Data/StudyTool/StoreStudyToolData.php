@@ -19,10 +19,9 @@ class StoreStudyToolData extends Data
         #[Required]
         public readonly array $content,
 
-        #[Optional]
-        public readonly ?string $image_url,
+        public readonly ?string $image_url = null,
 
         #[Required, In(['pending', 'failed', 'completed'])]
-        public readonly string $status,
+        public readonly string $status = 'completed',
     ) {}
 }
