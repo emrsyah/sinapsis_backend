@@ -21,8 +21,9 @@ class NoteController extends Controller
             ->forUser($request->user())
             ->with(['tags']);
 
-        if ($request->folder_id) {
-            $query->where('folder_id', $request->folder_id);
+        // 2. Ambil filter dari Query Params (?folder_id=...)
+        if ($request->query('folder_id')) {
+            $query->where('folder_id', $request->query('folder_id'));
         }
 
         if ($request->search) {
