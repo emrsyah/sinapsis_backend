@@ -2,125 +2,83 @@
 
 namespace App\Http\Controllers;
 
+use App\Data\Tag\StoreTagData;
+use App\Data\Tag\TagData;
+use App\Data\Tag\UpdateTagData;
+use App\Models\Note;
 use App\Models\Tag;
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class TagController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Display a listing of the user's tags.
      */
-    public function index()
+    public function index(Request $request): JsonResponse
     {
-        $tags = Tag::where('user_id', request()->user()->user_id)->get();
+        $tags = Tag::query()
+            ->forUser($request->user())
+            ->get();
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Data tag berhasil diambil',
-            'data' => $tags,
-        ], 200);
+        return response()->json(TagData::collect($tags));
     }
 
     /**
-     * Show the form for creating a new resource.
+     * Store a newly created tag.
      */
-    public function create(Request $request)
+    public function store(StoreTagData $data, Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'color' => 'required|string|max:255',
-        ]);
+        $tag = $request->user()->tags()->create($data->toArray());
 
-        $tag = Tag::create([
-            'user_id' => $request->user()->user_id,
-            'name' => $validated['name'],
-            'color' => $validated['color'],
-        ]);
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Tag berhasil dibuat',
-            'data' => $tag,
-        ], 200);
+        return response()->json(TagData::fromModel($tag), 201);
     }
 
     /**
-     * Update the specified resource in storage.
+     * Update the specified tag.
      */
-    public function update(Request $request, string $id)
+    public function update(UpdateTagData $data, Tag $tag): TagData
     {
-        $tag = Tag::where('user_id', $request->user()->user_id)
-            ->where('id', $id)
-            ->firstOrFail();
+        $this->authorize('update', $tag);
 
-        $dataToUpdate = [];
+        $tag->update(array_filter($data->toArray(), fn ($v) => $v !== null));
 
-        if ($request->has('name')) {
-            $dataToUpdate['name'] = $request->name;
-        }
-
-        if ($request->has('color')) {
-            $dataToUpdate['color'] = $request->color;
-        }
-
-        if (!empty($dataToUpdate)) {
-            $tag->update($dataToUpdate);
-        }
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Tag berhasil diupdate',
-            'data' => $tag,
-        ], 200);
+        return TagData::fromModel($tag->fresh());
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Remove the specified tag.
      */
-    public function destroy(string $id)
+    public function destroy(Tag $tag): JsonResponse
     {
-        $tag = Tag::where('user_id', request()->user()->user_id)
-            ->where('id', $id)
-            ->firstOrFail();
+        $this->authorize('delete', $tag);
 
         $tag->delete();
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Tag berhasil dihapus',
-            'data' => $tag,
-        ], 200);
+        return response()->json(null, 204);
     }
 
-    public function attachToNote(Request $request, string $note_id, string $tag_id)
+    /**
+     * Attach a tag to a note.
+     */
+    public function attach(Request $request, Note $note, Tag $tag): JsonResponse
     {
-        $tag = Tag::where('user_id', $request->user()->user_id)
-            ->where('id', $tag_id)
-            ->firstOrFail();
+        $this->authorize('update', $note);
 
-        $tag->notes()->attach($note_id);
+        $note->tags()->syncWithoutDetaching([$tag->id]);
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Tag berhasil ditambahkan ke note',
-            'data' => $tag,
-        ], 200);
+        return response()->json(null, 204);
     }
 
-    public function detachFromNote(Request $request, string $note_id, string $tag_id)
+    /**
+     * Detach a tag from a note.
+     */
+    public function detach(Request $request, Note $note, Tag $tag): JsonResponse
     {
-        $tag = Tag::where('user_id', $request->user()->user_id)
-            ->where('id', $tag_id)
-            ->firstOrFail();
+        $this->authorize('update', $note);
 
-        $tag->notes()->detach($note_id);
+        $note->tags()->detach($tag->id);
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Tag berhasil dihapus dari note',
-            'data' => $tag,
-        ], 200);
+        return response()->json(null, 204);
     }
 }

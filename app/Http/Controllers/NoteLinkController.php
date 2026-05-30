@@ -2,73 +2,58 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
-use App\Models\NoteLink;
+use App\Data\Note\NoteData;
+use App\Data\NoteLink\NoteLinkData;
+use App\Data\NoteLink\StoreNoteLinkData;
 use App\Models\Note;
+use App\Models\NoteLink;
+use Illuminate\Http\JsonResponse;
 
 class NoteLinkController extends Controller
 {
-    public function index(Request $request, string $note_id): JsonResponse
+    /**
+     * Get all outgoing links and backlinks for a note.
+     */
+    public function index(Note $note): JsonResponse
     {
-        $note = Note::where('user_id', $request->user()->user_id)
-            ->with(['goingLinks', 'backLinks'])
-            ->findOrFail($note_id);
+        $this->authorize('view', $note);
 
         return response()->json([
-            'status' => 'success',
-            'message' => 'Data link catatan berhasil diambil',
-            'data' => [
-                'going_links' => $note->goingLinks,
-                'back_links' => $note->backLinks,
-            ],
-        ], 200);
+            'backlinks' => NoteData::collect($note->backlinks()->get()),
+        ]);
     }
 
-    public function create(Request $request, string $note_id): JsonResponse
+    /**
+     * Create a link between two notes.
+     */
+    public function store(StoreNoteLinkData $data, Note $note): JsonResponse
     {
-        $request->validate([
-            'target_note' => 'required|uuid',
-        ]);
+        $this->authorize('update', $note);
 
-        $sourceNote = Note::where('user_id', $request->user()->user_id)
-            ->findOrFail($note_id);
-
-        $targetNote = Note::where('user_id', $request->user()->user_id)
-            ->findOrFail($request->target_note);
-
-        // Mencegah link ke diri sendiri
-        if ($sourceNote->id === $targetNote->id) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Tidak bisa menghubungkan catatan ke dirinya sendiri',
-            ], 422);
-        }
+        $targetNote = Note::findOrFail($data->target_note);
+        $this->authorize('view', $targetNote);
 
         $noteLink = NoteLink::firstOrCreate([
-            'source_note' => $sourceNote->id,
-            'target_note' => $targetNote->id,
+            'source_note' => $note->id,
+            'target_note' => $data->target_note,
         ]);
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Data note_link berhasil dibuat',
-            'data' => $noteLink,
-        ], 200);
+        return response()->json(NoteLinkData::fromModel($noteLink), 201);
     }
 
-    public function destroy(Request $request, string $id, string $target_id): JsonResponse
+    /**
+     * Delete a link between two notes.
+     */
+    public function destroy(Note $note, Note $target): JsonResponse
     {
-        $noteLink = NoteLink::where('source_note', $id)
-            ->where('target_note', $target_id)
+        $this->authorize('update', $note);
+
+        $noteLink = NoteLink::where('source_note', $note->id)
+            ->where('target_note', $target->id)
             ->firstOrFail();
 
         $noteLink->delete();
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Data note_link berhasil dihapus',
-        ], 200);
+        return response()->json(null, 204);
     }
 }

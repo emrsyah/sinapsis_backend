@@ -2,24 +2,24 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Laravel\Socialite\Facades\Socialite;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Laravel\Socialite\Facades\Socialite;
 
 class GoogleController extends Controller
 {
     // Mengarahkan pengguna ke halaman login Google
     public function redirectToGoogle()
     {
-        return Socialite::driver('google')->redirect();
+        return Socialite::driver('google')->stateless()->redirect();
     }
 
     // Menangani callback dari Google setelah login sukses
     public function handleGoogleCallback()
     {
         try {
-            $googleUser = Socialite::driver('google')->user();
+            $googleUser = Socialite::driver('google')->stateless()->user();
 
             // Cari user berdasarkan google_id
             $user = User::where('google_id', $googleUser->id)->first();
@@ -29,10 +29,10 @@ class GoogleController extends Controller
                 Auth::login($user);
             } else {
                 // Jika user belum ada, daftarkan akun baru
-                $user = User::updateOrCreate(['email' => $googleUser->email],[
+                $user = User::updateOrCreate(['email' => $googleUser->email], [
                     'name' => $googleUser->name,
                     'image' => $googleUser->avatar,
-                    'google_id' => $googleUser->id
+                    'google_id' => $googleUser->id,
                 ]);
 
                 Auth::login($user);
@@ -47,11 +47,11 @@ class GoogleController extends Controller
             return response()->json([
                 'message' => 'Login via Google berhasil',
                 'user' => $user,
-                'token' => $apiToken
-            ]); 
+                'token' => $apiToken,
+            ]);
 
         } catch (\Exception $e) {
-            return redirect('/')->with('error', 'Login via Google gagal. ' . $e->getMessage());
+            return redirect('/')->with('error', 'Login via Google gagal. '.$e->getMessage());
         }
     }
 
@@ -70,7 +70,7 @@ class GoogleController extends Controller
         }
 
         return response()->json([
-            'message' => 'Logout diproses dengan sukses'
+            'message' => 'Logout diproses dengan sukses',
         ]);
     }
 }

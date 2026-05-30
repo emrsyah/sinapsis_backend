@@ -20,13 +20,13 @@ return new class extends Migration
             $table->text('image_url')->nullable();
             $table->enum('status', ['pending', 'completed', 'failed'])->default('pending');
             $table->timestamps();
+            $table->softDeletes(); // Tambahkan ini
 
             // Index
             $table->index('note_id');
             $table->index('user_id');
         });
     }
-
 
     /**
      * Reverse the migrations.
