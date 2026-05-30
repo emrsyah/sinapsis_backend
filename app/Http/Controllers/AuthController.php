@@ -23,7 +23,7 @@ class AuthController extends Controller
     /**
      * Handle Google OAuth callback and issue a Sanctum token.
      */
-    public function handleGoogleCallback(): JsonResponse
+    public function handleGoogleCallback(): \Symfony\Component\HttpFoundation\RedirectResponse|RedirectResponse|JsonResponse
     {
         try {
             $googleUser = Socialite::driver('google')->stateless()->user();
@@ -40,12 +40,13 @@ class AuthController extends Controller
             $deviceName = request()->userAgent() ?? 'Unknown Device';
             $token = $user->createToken($deviceName)->plainTextToken;
 
-            return response()->json([
-                'token' => $token,
-                'user' => UserData::fromModel($user),
-            ]);
+            $frontendUrl = config('frontend.url');
+
+            return redirect("{$frontendUrl}/auth/callback?token={$token}");
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Google login failed: '.$e->getMessage()], 500);
+            $frontendUrl = config('frontend.url');
+
+            return redirect("{$frontendUrl}/auth?error=google_failed");
         }
     }
 
