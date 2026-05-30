@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Data\Note\NoteData;
 use App\Data\Note\StoreNoteData;
 use App\Data\Note\UpdateNoteData;
+use App\Events\NoteUpdated;
 use App\Models\Note;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -70,8 +71,11 @@ class NoteController extends Controller
         $this->authorize('update', $note);
 
         $note->update(array_filter($data->toArray(), fn ($v) => $v !== null));
+        $updated = $note->fresh()->load(['tags', 'backlinks']);
 
-        return NoteData::fromModel($note->fresh()->load(['tags', 'backlinks']));
+        broadcast(new NoteUpdated($updated))->toOthers();
+
+        return NoteData::fromModel($updated);
     }
 
     /**
