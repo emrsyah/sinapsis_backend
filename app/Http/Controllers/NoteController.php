@@ -8,7 +8,6 @@ use App\Data\Note\UpdateNoteData;
 use App\Models\Note;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use App\Events\MessageSent;
 
 class NoteController extends Controller
 {
@@ -26,15 +25,19 @@ class NoteController extends Controller
             $query->where('folder_id', $request->query('folder_id'));
         }
 
-        if ($request->search) {
-            $query->where('title', 'like', "%{$request->search}%");
+        if ($request->query('search')) {
+            $query->where('title', 'like', "%{$request->query('search')}%");
+        }
+
+        if ($request->query('tag_id')) {
+            $query->whereHas('tags', fn ($q) => $q->where('tags.id', $request->query('tag_id')));
         }
 
         if ($request->boolean('trash')) {
             $query->onlyTrashed();
         }
 
-        $notes = $query->get();
+        $notes = $query->orderByDesc('is_pinned')->orderByDesc('updated_at')->get();
 
         return response()->json(NoteData::collect($notes));
     }

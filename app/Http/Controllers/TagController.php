@@ -19,6 +19,7 @@ class TagController extends Controller
     {
         $tags = Tag::query()
             ->forUser($request->user())
+            ->withCount('notes')
             ->get();
 
         return response()->json(TagData::collect($tags));

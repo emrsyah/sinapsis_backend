@@ -13,6 +13,7 @@ class TagData extends Data
         public readonly string $name,
         public readonly ?string $color,
         public readonly ?string $created_at,
+        public readonly int $notes_count,
     ) {}
 
     public static function fromModel(Tag $tag): self
@@ -23,6 +24,7 @@ class TagData extends Data
             'name' => $tag->name,
             'color' => $tag->color,
             'created_at' => $tag->created_at?->toISOString(),
+            'notes_count' => $tag->notes_count ?? 0,
         ]);
     }
 }

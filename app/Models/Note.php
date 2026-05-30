@@ -26,6 +26,7 @@ class Note extends Model
         'title',
         'content',
         'is_published',
+        'is_pinned',
         'share_token',
     ];
 
@@ -33,6 +34,7 @@ class Note extends Model
     {
         return [
             'is_published' => 'boolean',
+            'is_pinned' => 'boolean',
             'deleted_at' => 'datetime',
         ];
     }

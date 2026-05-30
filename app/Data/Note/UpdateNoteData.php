@@ -19,5 +19,6 @@ class UpdateNoteData extends Data
         #[Nullable, Uuid, Exists('folders', 'id')]
         public readonly ?string $folder_id = null,
         public readonly ?bool $is_published = null,
+        public readonly ?bool $is_pinned = null,
     ) {}
 }
