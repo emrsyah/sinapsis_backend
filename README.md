@@ -35,6 +35,13 @@ Kami menyediakan runner concurrent untuk menjalankan semua service dev server se
 ### 1. Menjalankan Server Pengembangan (Lengkap)
 Untuk menjalankan **Laravel server**, **Queue listener**, dan **Vite dev server** secara bersamaan dalam satu terminal, gunakan perintah:
 ```bash
+git clone https://github.com/emrsyah/sinapsis_backend.git
+cd sinapsis_backend
+```
+
+Kemudian install dependency untuk laravel:
+
+```bash
 composer install
 ```
 
